@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>המכירות שלי</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1B2340" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="מכירות" />
+<meta name="mobile-web-app-capable" content="yes" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;600;700&family=Assistant:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  #app { width: 100%; }
+
+  .app-outer {
+    --ink: #F3F6FC;
+    --surface: #FFFFFF;
+    --surface-2: #ECF1F9;
+    --surface-3: #D7DFEC;
+    --gold: #9C7A2E;
+    --gold-dim: rgba(156,122,46,0.14);
+    --gold-deep: #7A5D1F;
+    --platinum: #4E5D80;
+    --platinum-dim: rgba(78,93,128,0.12);
+    --text-hi: #1B2340;
+    --text-lo: #626C88;
+    --danger: #B13F49;
+    --danger-dim: rgba(177,63,73,0.10);
+    --border: rgba(27,35,64,0.10);
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 0%, #E8F0FB 0%, #C7D8EE 70%);
+    font-family: 'Assistant', sans-serif;
+    padding: 18px 10px;
+  }
+  .phone-frame {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 840px;
+    height: min(840px, 92vh);
+    height: min(840px, 92dvh);
+    background: linear-gradient(160deg, #262c42, #0a0b12);
+    border-radius: 46px;
+    padding: 12px;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .side-btn { position: absolute; background: #1c2032; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
+  .side-btn.power { right: -3px; top: 130px; width: 3px; height: 60px; border-radius: 0 3px 3px 0; }
+  .side-btn.vol-up { left: -3px; top: 110px; width: 3px; height: 38px; border-radius: 3px 0 0 3px; }
+  .side-btn.vol-down { left: -3px; top: 156px; width: 3px; height: 38px; border-radius: 3px 0 0 3px; }
+  .phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--ink);
+    border-radius: 34px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-hi);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .phone-notch {
+    position: absolute;
+    top: 10px; left: 50%; transform: translateX(-50%);
+    width: 76px; height: 20px;
+    background: #05060a;
+    border-radius: 14px;
+    z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .phone-notch span { width: 5px; height: 5px; border-radius: 50%; background: #23283b; }
+
+  .statusbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 22px 2px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-lo);
+  }
+  .statusbar-icons { display: flex; align-items: center; gap: 5px; color: var(--text-lo); }
+
+  .app-header { padding: 6px 20px 14px 20px; }
+  .app-header-top { display: flex; align-items: center; justify-content: space-between; }
+  .app-title { display: flex; align-items: center; gap: 8px; }
+  .app-title h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 600; font-size: 18px; margin: 0; letter-spacing: 0.2px; }
+  .app-title-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--gold-dim);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold);
+  }
+  .refresh-btn {
+    background: transparent; border: none; color: var(--text-lo);
+    width: 30px; height: 30px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .refresh-btn:hover { background: var(--surface); color: var(--text-hi); }
+  .refresh-btn:focus-visible { outline: 2px solid var(--gold); }
+  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .app-subtitle { font-size: 12px; color: var(--text-lo); margin-top: 2px; }
+  .month-total-row {
+    margin-top: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .month-total-label { font-size: 12px; color: var(--text-lo); letter-spacing: 0.2px; }
+  .month-total-value { font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 24px; color: var(--gold); letter-spacing: 0.3px; }
+
+  .tab-content { flex: 1; overflow-y: auto; padding: 0 20px 16px 20px; -webkit-overflow-scrolling: touch; }
+  .tab-content::-webkit-scrollbar { width: 0; }
+
+  .section-label { font-size: 12px; color: var(--text-lo); margin: 18px 0 8px 0; font-weight: 500; }
+  .section-label:first-child { margin-top: 4px; }
+
+  .stat-row { display: flex; gap: 10px; }
+  .statcard {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+  }
+  .statcard-label { font-size: 11px; color: var(--text-lo); letter-spacing: 0.15px; }
+  .statcard-value { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 700; }
+  .statcard-sub { font-size: 10.5px; color: var(--text-lo); }
+
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .field { margin-bottom: 12px; }
+  .field:last-of-type { margin-bottom: 0; }
+  .field label { display: block; font-size: 11.5px; color: var(--text-lo); margin-bottom: 5px; }
+  .field input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 10px 12px;
+    color: var(--text-hi);
+    font-size: 14px;
+    font-family: 'Assistant', sans-serif;
+    outline: none;
+  }
+  .field input:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .form-error { color: var(--danger); font-size: 12px; margin-top: 4px; }
+  .add-btn {
+    width: 100%;
+    margin-top: 14px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+    color: #221a08;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-family: 'Assistant', sans-serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+  }
+  .add-btn:focus-visible { outline: 2px solid var(--text-hi); outline-offset: 2px; }
+  .add-btn:active { transform: scale(0.98); }
+  .add-btn:disabled { opacity: 0.6; cursor: default; }
+
+  .sale-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .sale-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sale-row-product { font-size: 13.5px; font-weight: 500; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sale-row-meta { font-size: 11px; color: var(--text-lo); font-family: 'JetBrains Mono', monospace; }
+  .sale-row-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .sale-row-sum { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--gold); font-size: 13.5px; }
+  .icon-btn {
+    background: transparent; border: none; color: var(--text-lo);
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--danger); background: var(--danger-dim); }
+  .icon-btn:focus-visible { outline: 2px solid var(--gold); }
+
+  .empty-state { text-align: center; padding: 34px 10px; color: var(--text-lo); }
+  .empty-state .icon { color: var(--text-lo); opacity: 0.45; margin-bottom: 10px; }
+  .empty-state p { font-size: 13px; margin: 0; }
+
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .month-nav-label { font-family: 'Frank Ruhl Libre', serif; font-weight: 600; font-size: 16px; letter-spacing: 0.2px; }
+  .month-nav button {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-hi);
+    width: 32px; height: 32px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .month-nav button:hover { background: var(--surface-2); }
+  .month-nav button:focus-visible { outline: 2px solid var(--gold); }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 12px; }
+  .cal-weekday { text-align: center; font-size: 10.5px; color: var(--text-lo); padding-bottom: 4px; }
+  .cal-cell {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer;
+    gap: 1px;
+    padding: 2px;
+  }
+  .cal-cell.blank { visibility: hidden; cursor: default; }
+  .cal-cell.is-today { box-shadow: inset 0 0 0 1.5px var(--gold); }
+  .cal-cell.is-selected-cell { box-shadow: inset 0 0 0 1.5px var(--platinum); }
+  .cal-cell.is-today.is-selected-cell { box-shadow: inset 0 0 0 1.5px var(--gold), inset 0 0 0 3px var(--platinum); }
+  .cal-cell-num { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-hi); }
+  .cal-cell-amt { font-size: 8px; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
+  .cal-cell:focus-visible { outline: 2px solid var(--gold); }
+
+  .signalbars-track {
+    display: flex; align-items: flex-end; gap: 4px;
+    overflow-x: auto; padding: 14px 4px 4px 4px;
+    margin-top: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .signalbars-track::-webkit-scrollbar { height: 0; }
+  .signalbar {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 5px;
+    background: transparent; border: none; cursor: pointer;
+    min-width: 20px; height: 120px; padding: 0;
+  }
+  .signalbar-fill {
+    width: 10px; border-radius: 4px 4px 2px 2px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  }
+  .signalbar.is-today .signalbar-fill { background: linear-gradient(180deg, var(--platinum), #6b7690); }
+  .signalbar.is-selected .signalbar-fill { box-shadow: 0 0 0 2px var(--text-hi); }
+  .signalbar-day { font-size: 8.5px; color: var(--text-lo); font-family: 'JetBrains Mono', monospace; }
+
+  .product-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .product-row:last-child { border-bottom: none; }
+  .product-rank { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-lo); width: 16px; }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 13.5px; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .product-bar-bg { height: 4px; background: var(--surface-2); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .product-bar-fill { height: 100%; background: var(--platinum); border-radius: 2px; }
+  .product-stats { text-align: left; flex-shrink: 0; }
+  .product-qty { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text-hi); }
+  .product-rev { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--gold); }
+
+  .bottom-nav {
+    display: flex; border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)) 14px;
+  }
+  .nav-btn {
+    flex: 1; background: transparent; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 0; border-radius: 12px;
+    color: var(--text-lo);
+  }
+  .nav-btn.active { color: var(--gold); }
+  .nav-btn span { font-size: 10px; }
+  .nav-btn:focus-visible { outline: 2px solid var(--gold); }
+  .home-indicator { width: 100px; height: 4px; background: var(--surface-3); border-radius: 3px; margin: 6px auto 4px auto; }
+
+  .icon { display: inline-flex; align-items: center; justify-content: center; }
+  .icon svg { width: 100%; height: 100%; display: block; }
+
+  .toast {
+    position: absolute; bottom: 82px; left: 50%; transform: translateX(-50%);
+    background: #1B2340; color: #F3F6FC;
+    padding: 9px 16px; border-radius: 11px; font-size: 12px;
+    border: 1px solid rgba(255,255,255,0.08); z-index: 60;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.25);
+    max-width: 85%; text-align: center;
+  }
+
+  .setup-screen { flex: 1; padding: 26px 24px; text-align: center; color: var(--text-lo); overflow-y: auto; }
+  .setup-screen .icon { color: var(--gold); margin-bottom: 12px; }
+  .setup-screen h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--text-hi); font-size: 16px; margin: 0 0 10px; }
+  .setup-screen p { font-size: 13px; line-height: 1.7; margin: 0 0 8px; }
+  .setup-screen code {
+    display: block; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; color: var(--gold); margin-top: 12px; word-break: break-all;
+    direction: ltr; text-align: left;
+  }
+
+  .load-error {
+    color: var(--danger); font-size: 12px; text-align: center; padding: 10px 12px;
+    background: var(--danger-dim); border: 1px solid rgba(177,63,73,0.25);
+    border-radius: 12px; margin-bottom: 12px;
+  }
+  .load-error p { margin: 0 0 6px; }
+  .error-detail-toggle {
+    background: none; border: none; color: var(--danger); text-decoration: underline;
+    font-size: 11px; cursor: pointer; padding: 2px;
+  }
+  .error-detail-code {
+    display: block; margin-top: 8px; background: rgba(0,0,0,0.04);
+    border-radius: 8px; padding: 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-hi); direction: ltr; text-align: left;
+    word-break: break-all; white-space: pre-wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .add-btn, .icon-btn, .cal-cell, .nav-btn, .refresh-btn { transition: none !important; }
+    .refresh-btn.spinning svg { animation: none !important; }
+  }
+
+  /* On real phone screens, drop the decorative mockup entirely so the
+     app itself fills the whole viewport edge to edge. Placed last so it
+     wins the cascade over the earlier same-specificity rules above. */
+  @media (max-width: 600px) {
+    .app-outer { padding: 0; background: var(--ink); min-height: 100vh; min-height: 100dvh; }
+    .phone-frame {
+      max-width: none; width: 100%;
+      height: 100vh; height: 100dvh;
+      border-radius: 0; padding: 0; box-shadow: none;
+      background: transparent;
+    }
+    .side-btn, .phone-notch, .statusbar { display: none; }
+    .phone-screen { border-radius: 0; box-shadow: none; }
+    .app-header { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+    .bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+    .home-indicator { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { h, render } from 'https://esm.sh/preact@10.19.3';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'https://esm.sh/preact@10.19.3/hooks';
+import htm from 'https://esm.sh/htm@3.1.1';
+
+const html = htm.bind(h);
+
+/* ============================================================
+   CONFIG — after you deploy the Apps Script, paste the Web App
+   URL below (it ends in /exec).
+   ============================================================ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRf6v431NCU9I7Npl22TouNlXMyIAArjxlxbYaidTye86M8UAhamWZJA9y5LWWgQ0Wng/exec';
+
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const WEEKDAYS = ['א','ב','ג','ד','ה','ו','ש'];
+
+const ICONS = {
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  barchart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  smartphone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+  packageSearch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.5 7.5l8.5 5 8.5-5"/><path d="M12 22V12"/></svg>',
+  signal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="16"/><line x1="9" y1="20" x2="9" y2="12"/><line x1="14" y1="20" x2="14" y2="8"/><line x1="19" y1="20" x2="19" y2="4"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>',
+  batteryFull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><line x1="22" y1="10.5" x2="22" y2="13.5"/><rect x="4" y="9" width="14" height="6" fill="currentColor" stroke="none"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.36L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.36L21 8"/><path d="M21 3v5h-5"/></svg>'
+};
+
+function Icon({ name, size = 18 }) {
+  return html`<span class="icon" style=${`width:${size}px;height:${size}px`} dangerouslySetInnerHTML=${{ __html: ICONS[name] || '' }}></span>`;
+}
+
+function todayISO() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function formatILS(n) {
+  return '₪' + Math.round(n).toLocaleString('he-IL');
+}
+function dayOfMonth(iso) {
+  return parseInt(String(iso).slice(8, 10), 10);
+}
+function summarizeProducts(salesArr) {
+  const map = {};
+  salesArr.forEach(s => {
+    if (!map[s.product]) map[s.product] = { qty: 0, revenue: 0 };
+    map[s.product].qty += s.qty;
+    map[s.product].revenue += s.price * s.qty;
+  });
+  return Object.entries(map).sort((a, b) => b[1].qty - a[1].qty);
+}
+
+/* ---------- Apps Script data layer ---------- */
+
+async function fetchSalesFromSheet() {
+  let res;
+  try {
+    res = await fetch(APPS_SCRIPT_URL, { method: 'GET' });
+  } catch (networkErr) {
+    throw new Error('רשת: ' + networkErr.message);
+  }
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr) {
+    throw new Error(`תגובה לא תקינה (HTTP ${res.status}): ${text.slice(0, 200)}`);
+  }
+  if (!data.ok) throw new Error('שגיאת שרת: ' + (data.error || 'שגיאה בטעינת הנתונים'));
+  return data.sales || [];
+}
+
+async function postToSheet(payload) {
+  let res;
+  try {
+    res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight on Apps Script
+      body: JSON.stringify(payload)
+    });
+  } catch (networkErr) {
+    throw new Error('רשת: ' + networkErr.message);
+  }
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr) {
+    throw new Error(`תגובה לא תקינה (HTTP ${res.status}): ${text.slice(0, 200)}`);
+  }
+  if (!data.ok) throw new Error('שגיאת שרת: ' + (data.error || 'שגיאה בשמירה'));
+  return data;
+}
+
+/* ---------- small presentational pieces ---------- */
+
+function StatCard({ label, value, accent, sub }) {
+  return html`
+    <div class="statcard">
+      <span class="statcard-label">${label}</span>
+      <span class="statcard-value" style=${`color:${accent || 'var(--text-hi)'}`}>${value}</span>
+      ${sub ? html`<span class="statcard-sub">${sub}</span>` : null}
+    </div>
+  `;
+}
+
+function StatusBar() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const time = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return html`
+    <div class="statusbar">
+      <span>${time}</span>
+      <div class="statusbar-icons">
+        <${Icon} name="signal" size=${13} />
+        <${Icon} name="wifi" size=${13} />
+        <${Icon} name="batteryFull" size=${15} />
+      </div>
+    </div>
+  `;
+}
+
+function SignalBars({ dayTotals, daysInMonth, maxTotal, onPick, todayDay, selected }) {
+  const bars = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const val = dayTotals[d] || 0;
+    const ratio = maxTotal > 0 ? val / maxTotal : 0;
+    const h = val > 0 ? 10 + ratio * 96 : 4;
+    bars.push(html`
+      <button
+        key=${d}
+        class=${`signalbar ${d === todayDay ? 'is-today' : ''} ${d === selected ? 'is-selected' : ''}`}
+        onClick=${() => onPick(d)}
+        aria-label=${`יום ${d}, ${formatILS(val)}`}
+      >
+        <span class="signalbar-fill" style=${`height:${h}px;opacity:${val > 0 ? 0.55 + ratio * 0.45 : 0.25}`}></span>
+        <span class="signalbar-day">${d}</span>
+      </button>
+    `);
+  }
+  return html`<div class="signalbars-track">${bars}</div>`;
+}
+
+/* ---------- main app ---------- */
+
+function App() {
+  const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === -1;
+
+  const [sales, setSales] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [loadErrorDetail, setLoadErrorDetail] = useState('');
+  const [showErrorDetail, setShowErrorDetail] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState('');
+  const toastTimer = useRef(null);
+
+  const [tab, setTab] = useState('add');
+  const [cursor, setCursor] = useState(() => {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+
+  const [product, setProduct] = useState('');
+  const [price, setPrice] = useState('');
+  const [qty, setQty] = useState('1');
+  const [date, setDate] = useState(todayISO());
+  const [formError, setFormError] = useState('');
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 3800);
+  }, []);
+
+  const loadSales = useCallback(async (silent) => {
+    if (!configured) return;
+    if (!silent) setRefreshing(true);
+    try {
+      const data = await fetchSalesFromSheet();
+      setSales(data);
+      setLoadError('');
+      setLoadErrorDetail('');
+    } catch (e) {
+      setLoadError('לא ניתן להתחבר לגיליון כרגע.');
+      setLoadErrorDetail(e && e.message ? e.message : String(e));
+    } finally {
+      setLoaded(true);
+      setRefreshing(false);
+    }
+  }, [configured]);
+
+  useEffect(() => { loadSales(false); }, []);
+
+  useEffect(() => {
+    function onVis() { if (document.visibilityState === 'visible') loadSales(true); }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [loadSales]);
+
+  const addSale = () => {
+    const p = parseFloat(price);
+    const q = parseInt(qty, 10) || 1;
+    if (!product.trim()) { setFormError('נא להזין שם מוצר'); return; }
+    if (!p || p <= 0) { setFormError('נא להזין מחיר תקין'); return; }
+    if (!date) { setFormError('נא לבחור תאריך'); return; }
+    const sale = { id: Date.now().toString(36) + Math.random().toString(36).slice(2), product: product.trim(), price: p, qty: q, date };
+    setSales(prev => [sale, ...prev]);
+    setProduct(''); setPrice(''); setQty('1'); setFormError('');
+    postToSheet({ action: 'add', sale }).catch(() => {
+      showToast('השמירה בגיליון נכשלה — מרעננים נתונים');
+      loadSales(true);
+    });
+  };
+
+  const deleteSale = (id) => {
+    setSales(prev => prev.filter(s => s.id !== id));
+    postToSheet({ action: 'delete', id }).catch(() => {
+      showToast('המחיקה נכשלה — מרעננים נתונים');
+      loadSales(true);
+    });
+  };
+
+  const productNames = useMemo(() => Array.from(new Set(sales.map(s => s.product))).sort(), [sales]);
+
+  const todaySales = useMemo(() => sales.filter(s => s.date === todayISO())
+    .sort((a, b) => (a.id < b.id ? 1 : -1)), [sales]);
+  const todayTotal = useMemo(() => todaySales.reduce((a, s) => a + s.price * s.qty, 0), [todaySales]);
+
+  const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
+  const firstWeekday = new Date(cursor.y, cursor.m, 1).getDay();
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === cursor.y && now.getMonth() === cursor.m;
+  const todayDay = isCurrentMonth ? now.getDate() : null;
+
+  useEffect(() => {
+    setSelectedDay(isCurrentMonth ? now.getDate() : 1);
+    // eslint-disable-next-line
+  }, [cursor.y, cursor.m]);
+
+  const monthSales = useMemo(() => sales.filter(s => {
+    const d = new Date(s.date + 'T00:00:00');
+    return d.getFullYear() === cursor.y && d.getMonth() === cursor.m;
+  }), [sales, cursor]);
+
+  const dayTotals = useMemo(() => {
+    const map = {};
+    monthSales.forEach(s => {
+      const d = dayOfMonth(s.date);
+      map[d] = (map[d] || 0) + s.price * s.qty;
+    });
+    return map;
+  }, [monthSales]);
+
+  const monthTotal = useMemo(() => monthSales.reduce((a, s) => a + s.price * s.qty, 0), [monthSales]);
+  const monthItemCount = useMemo(() => monthSales.reduce((a, s) => a + s.qty, 0), [monthSales]);
+  const maxDayTotal = Math.max(0, ...Object.values(dayTotals));
+
+  const productSummary = useMemo(() => summarizeProducts(monthSales), [monthSales]);
+  const maxProductQty = Math.max(1, ...productSummary.map(([, v]) => v.qty));
+
+  const goPrevMonth = () => setCursor(c => (c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 }));
+  const goNextMonth = () => setCursor(c => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }));
+
+  const selectedDaySales = selectedDay
+    ? monthSales.filter(s => dayOfMonth(s.date) === selectedDay).sort((a, b) => (a.id < b.id ? 1 : -1))
+    : [];
+  const selectedDayTotal = selectedDaySales.reduce((a, s) => a + s.price * s.qty, 0);
+  const selectedDayItemCount = selectedDaySales.reduce((a, s) => a + s.qty, 0);
+  const dayProductSummary = useMemo(() => summarizeProducts(selectedDaySales), [selectedDaySales]);
+  const maxDayProductQty = Math.max(1, ...dayProductSummary.map(([, v]) => v.qty));
+
+  const leadingBlanks = Array.from({ length: firstWeekday });
+  const dayCells = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const saleRow = (s) => html`
+    <div class="sale-row" key=${s.id}>
+      <div class="sale-row-main">
+        <span class="sale-row-product">${s.product}</span>
+        <span class="sale-row-meta">${s.qty} × ${formatILS(s.price)}</span>
+      </div>
+      <div class="sale-row-right">
+        <span class="sale-row-sum">${formatILS(s.price * s.qty)}</span>
+        <button class="icon-btn" onClick=${() => deleteSale(s.id)} aria-label="מחיקת מכירה">
+          <${Icon} name="trash" size=${15} />
+        </button>
+      </div>
+    </div>
+  `;
+
+  const productList = (list, max) => html`
+    <div class="form-card" style="margin-top:8px">
+      ${list.map(([name, v], i) => html`
+        <div class="product-row" key=${name}>
+          <span class="product-rank">${i + 1}</span>
+          <div class="product-info">
+            <span class="product-name">${name}</span>
+            <div class="product-bar-bg">
+              <div class="product-bar-fill" style=${`width:${(v.qty / max) * 100}%`}></div>
+            </div>
+          </div>
+          <div class="product-stats">
+            <div class="product-qty">${v.qty} יח׳</div>
+            <div class="product-rev">${formatILS(v.revenue)}</div>
+          </div>
+        </div>
+      `)}
+    </div>
+  `;
+
+  if (!configured) {
+    return html`
+      <div class="app-outer">
+        <div class="phone-frame">
+          <div class="side-btn power"></div>
+          <div class="side-btn vol-up"></div>
+          <div class="side-btn vol-down"></div>
+          <div class="phone-notch"><span></span></div>
+          <div class="phone-screen" dir="rtl">
+            <${StatusBar} />
+            <div class="setup-screen">
+              <${Icon} name="smartphone" size=${34} />
+              <h2>עוד לא מחובר לגיליון</h2>
+              <p>פרסמת את סקריפט ה-Apps Script? העתק את כתובת ה-Web App (מסתיימת ב-/exec/) והדבק אותה בקוד, בשורה:</p>
+              <code>const APPS_SCRIPT_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';</code>
+              <p style="margin-top:14px">שמור את הקובץ והעלה שוב.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return html`
+    <div class="app-outer">
+      <div class="phone-frame">
+        <div class="side-btn power"></div>
+        <div class="side-btn vol-up"></div>
+        <div class="side-btn vol-down"></div>
+        <div class="phone-notch"><span></span></div>
+
+        <div class="phone-screen" dir="rtl">
+          <${StatusBar} />
+
+          <div class="app-header">
+            <div class="app-header-top">
+              <div class="app-title">
+                <div class="app-title-icon"><${Icon} name="smartphone" size=${16} /></div>
+                <h1>המכירות שלי</h1>
+              </div>
+              <button
+                class=${`refresh-btn ${refreshing ? 'spinning' : ''}`}
+                onClick=${() => loadSales(false)}
+                aria-label="רענון נתונים"
+              >
+                <${Icon} name="refresh" size=${16} />
+              </button>
+            </div>
+            <div class="app-subtitle">
+              ${now.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
+            ${tab === 'add' ? html`
+              <div class="month-total-row">
+                <span class="month-total-label">סה"כ היום</span>
+                <span class="month-total-value">${formatILS(todayTotal)}</span>
+              </div>
+            ` : null}
+          </div>
+
+          ${!loaded ? html`
+            <div class="tab-content"><div class="empty-state"><p>טוען נתונים מהגיליון…</p></div></div>
+          ` : html`
+            <div class="tab-content">
+              ${loadError ? html`
+                <div class="load-error">
+                  <p>${loadError}</p>
+                  <button class="error-detail-toggle" onClick=${() => setShowErrorDetail(v => !v)}>
+                    ${showErrorDetail ? 'הסתר פרטים טכניים' : 'הצג פרטים טכניים'}
+                  </button>
+                  ${showErrorDetail ? html`<code class="error-detail-code">${loadErrorDetail}</code>` : null}
+                </div>
+              ` : null}
+
+              ${tab === 'add' ? html`
+                <div class="stat-row">
+                  <${StatCard} label="פריטים היום" value=${todaySales.reduce((a, s) => a + s.qty, 0)} />
+                  <${StatCard} label="מכירות היום" value=${todaySales.length} />
+                </div>
+
+                <div class="form-card">
+                  <div class="field">
+                    <label for="f-product">שם המוצר</label>
+                    <input id="f-product" list="product-list" value=${product}
+                      onInput=${e => setProduct(e.target.value)}
+                      placeholder="לדוגמה: iPhone 15 128GB" />
+                    <datalist id="product-list">
+                      ${productNames.map(p => html`<option key=${p} value=${p} />`)}
+                    </datalist>
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="f-price">מחיר (₪)</label>
+                      <input id="f-price" type="number" inputmode="decimal" min="0" step="0.01"
+                        value=${price} onInput=${e => setPrice(e.target.value)} placeholder="0" />
+                    </div>
+                    <div class="field">
+                      <label for="f-qty">כמות</label>
+                      <input id="f-qty" type="number" inputmode="numeric" min="1" step="1"
+                        value=${qty} onInput=${e => setQty(e.target.value)} />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="f-date">תאריך</label>
+                    <input id="f-date" type="date" value=${date} onInput=${e => setDate(e.target.value)} />
+                  </div>
+                  ${formError ? html`<div class="form-error">${formError}</div>` : null}
+                  <button class="add-btn" onClick=${addSale}>
+                    <${Icon} name="plus" size=${17} /> הוספת מכירה
+                  </button>
+                </div>
+
+                <div class="section-label">מכירות היום</div>
+                ${todaySales.length === 0 ? html`
+                  <div class="empty-state">
+                    <${Icon} name="packageSearch" size=${30} />
+                    <p>עוד לא נרשמו מכירות היום</p>
+                  </div>
+                ` : todaySales.map(saleRow)}
+              ` : null}
+
+              ${tab === 'log' ? html`
+                <div class="month-nav">
+                  <button onClick=${goPrevMonth} aria-label="חודש קודם"><${Icon} name="chevronRight" size=${17} /></button>
+                  <span class="month-nav-label">${MONTH_NAMES[cursor.m]} ${cursor.y}</span>
+                  <button onClick=${goNextMonth} aria-label="חודש הבא"><${Icon} name="chevronLeft" size=${17} /></button>
+                </div>
+
+                <div class="cal-grid">
+                  ${WEEKDAYS.map(w => html`<div class="cal-weekday" key=${w}>${w}</div>`)}
+                  ${leadingBlanks.map((_, i) => html`<div class="cal-cell blank" key=${'b' + i}></div>`)}
+                  ${dayCells.map(d => {
+                    const amt = dayTotals[d] || 0;
+                    const style = amt > 0 ? `background:rgba(212,175,106,${0.08 + (amt / (maxDayTotal || 1)) * 0.28})` : '';
+                    return html`
+                      <button
+                        key=${d}
+                        class=${`cal-cell ${d === todayDay ? 'is-today' : ''} ${d === selectedDay ? 'is-selected-cell' : ''}`}
+                        style=${style}
+                        onClick=${() => setSelectedDay(d)}
+                      >
+                        <span class="cal-cell-num">${d}</span>
+                        ${amt > 0 ? html`<span class="cal-cell-amt">${formatILS(amt)}</span>` : null}
+                      </button>
+                    `;
+                  })}
+                </div>
+
+                <div class="section-label">
+                  ${selectedDay ? `סיכום ל־${selectedDay} ב${MONTH_NAMES[cursor.m]}` : 'בחר יום בלוח'}
+                </div>
+                <div class="stat-row">
+                  <${StatCard} label="סה״כ ליום" value=${formatILS(selectedDayTotal)} accent="var(--gold)" />
+                  <${StatCard} label="פריטים" value=${selectedDayItemCount} accent="var(--platinum)" />
+                </div>
+
+                ${dayProductSummary.length > 0 ? productList(dayProductSummary, maxDayProductQty) : null}
+
+                <div class="section-label">מכירות ביום זה</div>
+                ${selectedDaySales.length === 0 ? html`
+                  <div class="empty-state">
+                    <${Icon} name="packageSearch" size=${30} />
+                    <p>אין מכירות ביום זה</p>
+                  </div>
+                ` : selectedDaySales.map(saleRow)}
+              ` : null}
+
+              ${tab === 'summary' ? html`
+                <div class="month-nav">
+                  <button onClick=${goPrevMonth} aria-label="חודש קודם"><${Icon} name="chevronRight" size=${17} /></button>
+                  <span class="month-nav-label">${MONTH_NAMES[cursor.m]} ${cursor.y}</span>
+                  <button onClick=${goNextMonth} aria-label="חודש הבא"><${Icon} name="chevronLeft" size=${17} /></button>
+                </div>
+
+                <div class="stat-row" style="margin-top:12px">
+                  <${StatCard} label="הכנסות החודש" value=${formatILS(monthTotal)} accent="var(--gold)" />
+                  <${StatCard} label="פריטים שנמכרו" value=${monthItemCount} accent="var(--platinum)" />
+                </div>
+
+                <div class="section-label">מכירות יומיות</div>
+                ${monthSales.length === 0 ? html`
+                  <div class="empty-state">
+                    <${Icon} name="barchart" size=${30} />
+                    <p>אין עדיין מכירות בחודש הזה</p>
+                  </div>
+                ` : html`
+                  <${SignalBars}
+                    dayTotals=${dayTotals}
+                    daysInMonth=${daysInMonth}
+                    maxTotal=${maxDayTotal}
+                    onPick=${(d) => { setSelectedDay(d); setTab('log'); }}
+                    todayDay=${todayDay}
+                    selected=${selectedDay}
+                  />
+                `}
+
+                <div class="section-label">מוצרים שנמכרו החודש</div>
+                ${productSummary.length === 0 ? html`
+                  <div class="empty-state">
+                    <${Icon} name="packageSearch" size=${30} />
+                    <p>אין נתוני מוצרים עדיין</p>
+                  </div>
+                ` : productList(productSummary, maxProductQty)}
+              ` : null}
+            </div>
+          `}
+
+          <div class="bottom-nav">
+            <button class=${`nav-btn ${tab === 'add' ? 'active' : ''}`} onClick=${() => setTab('add')}>
+              <${Icon} name="plus" size=${19} /><span>הוספה</span>
+            </button>
+            <button class=${`nav-btn ${tab === 'log' ? 'active' : ''}`} onClick=${() => setTab('log')}>
+              <${Icon} name="calendar" size=${19} /><span>סיכום יומי</span>
+            </button>
+            <button class=${`nav-btn ${tab === 'summary' ? 'active' : ''}`} onClick=${() => setTab('summary')}>
+              <${Icon} name="barchart" size=${19} /><span>סיכום חודשי</span>
+            </button>
+          </div>
+          <div class="home-indicator"></div>
+
+          ${toast ? html`<div class="toast">${toast}</div>` : null}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+render(html`<${App} />`, document.getElementById('app'));
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+</script>
+</body>
+</html>
