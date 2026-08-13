@@ -1,5 +1,5 @@
 const CACHE_NAME = 'sales-app-shell-v1';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const ASSETS = ['./', './index.html', './manifest.json', './icon-192-2.png', './icon-512-2.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
