@@ -1,6 +1,6 @@
 {
-  "name": "המכירות שלי",
-  "short_name": "מכירות",
+  "name": "המכירות שלי בלאק פון",
+  "short_name": "בלאק פון",
   "description": "מעקב מכירות לחנות טלפונים",
   "start_url": "./index.html",
   "scope": "./",
