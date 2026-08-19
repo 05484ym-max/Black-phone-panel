@@ -692,6 +692,19 @@ function App() {
       return next;
     });
     setProduct(''); setPrice(''); setQty('1'); setFormError('');
+
+    const isBackdated = date !== todayISO();
+    if (isBackdated) {
+      const [y, m, d] = date.split('-').map(Number);
+      skipDayResetRef.current = true;
+      setCursor({ y, m: m - 1 });
+      setSelectedDay(d);
+      setTab('log');
+      showToast(`המכירה נוספה ליום ${d}.${m}.${y} — הנה סיכום היום`);
+    } else {
+      showToast('המכירה נוספה בהצלחה');
+    }
+
     postToSheet({ action: 'add', sale }).catch(() => {
       showToast('השמירה בגיליון נכשלה — מרעננים נתונים');
       loadSales(true);
@@ -722,7 +735,9 @@ function App() {
   const isCurrentMonth = now.getFullYear() === cursor.y && now.getMonth() === cursor.m;
   const todayDay = isCurrentMonth ? now.getDate() : null;
 
+  const skipDayResetRef = useRef(false);
   useEffect(() => {
+    if (skipDayResetRef.current) { skipDayResetRef.current = false; return; }
     setSelectedDay(isCurrentMonth ? now.getDate() : 1);
     // eslint-disable-next-line
   }, [cursor.y, cursor.m]);
@@ -953,7 +968,7 @@ function App() {
                     </div>
                   </div>
                   <div class="field">
-                    <label for="f-date">תאריך</label>
+                    <label for="f-date">תאריך (ניתן לבחור גם יום שכבר עבר)</label>
                     <input id="f-date" type="date" value=${date} onInput=${e => setDate(e.target.value)} />
                   </div>
                   ${formError ? html`<div class="form-error">${formError}</div>` : null}
