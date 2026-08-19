@@ -266,6 +266,32 @@
   }
   .track-dates b { color: var(--text-hi); font-weight: 600; }
 
+  .search-bar { position: relative; margin-top: 14px; display: flex; align-items: center; }
+  .search-bar .search-icon {
+    position: absolute; right: 14px; color: var(--text-lo);
+    display: flex; align-items: center; justify-content: center; pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 11px 40px;
+    font-size: 13.5px;
+    font-family: 'Assistant', sans-serif;
+    color: var(--text-hi);
+    outline: none;
+  }
+  .search-input:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+  .search-input::placeholder { color: var(--text-lo); }
+  .search-clear {
+    position: absolute; left: 10px;
+    background: var(--surface-2); border: none; color: var(--text-lo);
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .search-clear:hover { background: var(--danger-dim); color: var(--danger); }
+
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
   .month-nav-label { font-family: 'Frank Ruhl Libre', serif; font-weight: 600; font-size: 16px; letter-spacing: 0.2px; }
   .month-nav button {
@@ -484,7 +510,9 @@ const ICONS = {
   refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.36L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.36L21 8"/><path d="M21 3v5h-5"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
   gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"/></svg>',
-  idcard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h6"/><path d="M13 14h4"/></svg>'
+  idcard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h6"/><path d="M13 14h4"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>'
 };
 
 function Icon({ name, size = 18 }) {
@@ -513,6 +541,19 @@ function summarizeProducts(salesArr) {
     map[s.product].revenue += s.price * s.qty;
   });
   return Object.entries(map).sort((a, b) => b[1].qty - a[1].qty);
+}
+
+function normalizeSearchText(s) {
+  return String(s || '').toLowerCase().replace(/[\s-]/g, '');
+}
+function trackMatchesSearch(t, query) {
+  const q = normalizeSearchText(query);
+  if (!q) return true;
+  return normalizeSearchText(t.customerName).includes(q)
+    || normalizeSearchText(t.phone1).includes(q)
+    || normalizeSearchText(t.phone2).includes(q)
+    || normalizeSearchText(t.customerIdNum).includes(q)
+    || normalizeSearchText(t.identifier).includes(q);
 }
 
 /* ---------- local cache (instant load, refreshed in background) ---------- */
@@ -731,6 +772,7 @@ function App() {
   const [trAddress, setTrAddress] = useState('');
   const [trSaleDate, setTrSaleDate] = useState(todayISO());
   const [trFormError, setTrFormError] = useState('');
+  const [trackSearch, setTrackSearch] = useState('');
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -924,6 +966,13 @@ function App() {
   const expiredTracks = useMemo(() =>
     tracksWithExpiry.filter(t => t.isExpired).sort((a, b) => a.daysLeft - b.daysLeft),
   [tracksWithExpiry]);
+
+  const searchedTracks = useMemo(() =>
+    tracksWithExpiry.filter(t => trackMatchesSearch(t, trackSearch)),
+  [tracksWithExpiry, trackSearch]);
+  const searchedExpiredTracks = useMemo(() =>
+    expiredTracks.filter(t => trackMatchesSearch(t, trackSearch)),
+  [expiredTracks, trackSearch]);
 
   const yearMonthTotals = useMemo(() => {
     const arr = new Array(12).fill(0);
@@ -1308,6 +1357,21 @@ function App() {
                   <${StatCard} label="עברה להם שנה" value=${expiredTracks.length} accent="var(--danger)" />
                 </div>
 
+                <div class="search-bar">
+                  <span class="search-icon"><${Icon} name="search" size=${15} /></span>
+                  <input
+                    class="search-input"
+                    value=${trackSearch}
+                    onInput=${e => setTrackSearch(e.target.value)}
+                    placeholder="חיפוש לפי שם, טלפון, ת.ז או מספר מזהה"
+                  />
+                  ${trackSearch ? html`
+                    <button class="search-clear" onClick=${() => setTrackSearch('')} aria-label="ניקוי חיפוש">
+                      <${Icon} name="close" size=${12} />
+                    </button>
+                  ` : null}
+                </div>
+
                 <div class="form-card">
                   <div class="field">
                     <label for="tr-name">שם לקוח</label>
@@ -1349,18 +1413,18 @@ function App() {
                   </button>
                 </div>
 
-                ${expiredTracks.length > 0 ? html`
+                ${searchedExpiredTracks.length > 0 ? html`
                   <div class="section-label">עברה שנה — לטיפול</div>
-                  ${expiredTracks.map(trackRow)}
+                  ${searchedExpiredTracks.map(trackRow)}
                 ` : null}
 
                 <div class="section-label">כל לקוחות המסלול</div>
-                ${tracksWithExpiry.length === 0 ? html`
+                ${searchedTracks.length === 0 ? html`
                   <div class="empty-state">
                     <${Icon} name="idcard" size=${30} />
-                    <p>עוד לא נוספו לקוחות מסלול</p>
+                    <p>${trackSearch ? 'לא נמצאו לקוחות התואמים לחיפוש' : 'עוד לא נוספו לקוחות מסלול'}</p>
                   </div>
-                ` : tracksWithExpiry.map(trackRow)}
+                ` : searchedTracks.map(trackRow)}
               ` : null}
             </div>
           `}
