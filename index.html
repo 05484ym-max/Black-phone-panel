@@ -235,6 +235,37 @@
   .empty-state .icon { color: var(--text-lo); opacity: 0.45; margin-bottom: 10px; }
   .empty-state p { font-size: 13px; margin: 0; }
 
+  .track-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .track-card.is-expired {
+    border-color: rgba(177,63,73,0.35);
+    background: linear-gradient(135deg, var(--danger-dim), rgba(177,63,73,0.02));
+  }
+  .track-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+  .track-name { font-size: 14px; font-weight: 700; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .track-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .track-badge.ok { background: var(--platinum-dim); color: var(--platinum); }
+  .track-badge.expired { background: var(--danger-dim); color: var(--danger); }
+  .track-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; margin-bottom: 9px; }
+  .track-meta-item { min-width: 0; }
+  .track-meta-item.span2 { grid-column: 1 / -1; }
+  .track-meta-label { font-size: 10px; color: var(--text-lo); }
+  .track-meta-value { font-size: 12.5px; color: var(--text-hi); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-dates {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 11px; color: var(--text-lo);
+    padding-top: 9px; border-top: 1px solid var(--border);
+  }
+  .track-dates b { color: var(--text-hi); font-weight: 600; }
+
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
   .month-nav-label { font-family: 'Frank Ruhl Libre', serif; font-weight: 600; font-size: 16px; letter-spacing: 0.2px; }
   .month-nav button {
@@ -452,7 +483,8 @@ const ICONS = {
   batteryFull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><line x1="22" y1="10.5" x2="22" y2="13.5"/><rect x="4" y="9" width="14" height="6" fill="currentColor" stroke="none"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.36L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.36L21 8"/><path d="M21 3v5h-5"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-  gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"/></svg>'
+  gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"/></svg>',
+  idcard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h6"/><path d="M13 14h4"/></svg>'
 };
 
 function Icon({ name, size = 18 }) {
@@ -468,6 +500,10 @@ function formatILS(n) {
 }
 function dayOfMonth(iso) {
   return parseInt(String(iso).slice(8, 10), 10);
+}
+function addOneYear(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return new Date(y + 1, m - 1, d);
 }
 function summarizeProducts(salesArr) {
   const map = {};
@@ -497,6 +533,27 @@ function saveCachedSales(data) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
   } catch (e) {
     // storage unavailable/full — safe to ignore, just means no instant-load next time
+  }
+}
+
+// Track (מסלול) customer records are stored only on this device for now —
+// syncing them to the sheet needs matching changes on the Apps Script side.
+const TRACKS_CACHE_KEY = 'tracksCacheV1';
+
+function loadCachedTracks() {
+  try {
+    const raw = localStorage.getItem(TRACKS_CACHE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCachedTracks(data) {
+  try {
+    localStorage.setItem(TRACKS_CACHE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // storage unavailable/full
   }
 }
 
@@ -661,6 +718,17 @@ function App() {
   const [date, setDate] = useState(todayISO());
   const [formError, setFormError] = useState('');
 
+  const [tracks, setTracks] = useState(() => loadCachedTracks());
+  const [trName, setTrName] = useState('');
+  const [trIdNum, setTrIdNum] = useState('');
+  const [trPhone1, setTrPhone1] = useState('');
+  const [trPhone2, setTrPhone2] = useState('');
+  const [trDevicePhone, setTrDevicePhone] = useState('');
+  const [trIdentifier, setTrIdentifier] = useState('');
+  const [trAddress, setTrAddress] = useState('');
+  const [trSaleDate, setTrSaleDate] = useState(todayISO());
+  const [trFormError, setTrFormError] = useState('');
+
   const showToast = useCallback((msg) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -748,6 +816,39 @@ function App() {
     });
   };
 
+  const addTrack = () => {
+    if (!trName.trim()) { setTrFormError('נא להזין שם לקוח'); return; }
+    if (!trSaleDate) { setTrFormError('נא לבחור תאריך מכירה'); return; }
+    const track = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      customerName: trName.trim(),
+      customerIdNum: trIdNum.trim(),
+      phone1: trPhone1.trim(),
+      phone2: trPhone2.trim(),
+      devicePhone: trDevicePhone.trim(),
+      identifier: trIdentifier.trim(),
+      address: trAddress.trim(),
+      saleDate: trSaleDate
+    };
+    setTracks(prev => {
+      const next = [track, ...prev];
+      saveCachedTracks(next);
+      return next;
+    });
+    setTrName(''); setTrIdNum(''); setTrPhone1(''); setTrPhone2('');
+    setTrDevicePhone(''); setTrIdentifier(''); setTrAddress(''); setTrSaleDate(todayISO());
+    setTrFormError('');
+    showToast('לקוח מסלול נוסף בהצלחה');
+  };
+
+  const deleteTrack = (id) => {
+    setTracks(prev => {
+      const next = prev.filter(t => t.id !== id);
+      saveCachedTracks(next);
+      return next;
+    });
+  };
+
   const productNames = useMemo(() => Array.from(new Set(sales.map(s => s.product))).sort(), [sales]);
 
   const todaySales = useMemo(() => sales.filter(s => s.date === todayISO())
@@ -793,6 +894,19 @@ function App() {
     .reduce((a, s) => a + s.qty, 0), [monthSales]);
   const bonusTotal = bonusQty * BONUS_PER_UNIT;
 
+  const tracksWithExpiry = useMemo(() => {
+    const nowMs = Date.now();
+    return tracks.map(t => {
+      const expiryDate = addOneYear(t.saleDate);
+      const daysLeft = Math.floor((expiryDate.getTime() - nowMs) / 86400000);
+      return { ...t, expiryDate, isExpired: daysLeft < 0, daysLeft };
+    }).sort((a, b) => (a.saleDate < b.saleDate ? 1 : -1));
+  }, [tracks]);
+
+  const expiredTracks = useMemo(() =>
+    tracksWithExpiry.filter(t => t.isExpired).sort((a, b) => a.daysLeft - b.daysLeft),
+  [tracksWithExpiry]);
+
   const yearMonthTotals = useMemo(() => {
     const arr = new Array(12).fill(0);
     sales.forEach(s => {
@@ -833,6 +947,35 @@ function App() {
       </div>
     </div>
   `;
+
+  const trackRow = (t) => {
+    const saleDateFmt = new Date(t.saleDate + 'T00:00:00').toLocaleDateString('he-IL');
+    const expiryFmt = t.expiryDate.toLocaleDateString('he-IL');
+    const badgeText = t.isExpired ? `עברה שנה · ${Math.abs(t.daysLeft)} ימים` : `${t.daysLeft} ימים לתפוגה`;
+    return html`
+      <div class=${`track-card ${t.isExpired ? 'is-expired' : ''}`} key=${t.id}>
+        <div class="track-head">
+          <span class="track-name">${t.customerName}</span>
+          <span class=${`track-badge ${t.isExpired ? 'expired' : 'ok'}`}>${badgeText}</span>
+        </div>
+        <div class="track-meta">
+          ${t.customerIdNum ? html`<div class="track-meta-item"><div class="track-meta-label">ת.ז</div><div class="track-meta-value">${t.customerIdNum}</div></div>` : null}
+          ${t.phone1 ? html`<div class="track-meta-item"><div class="track-meta-label">טלפון 1</div><div class="track-meta-value">${t.phone1}</div></div>` : null}
+          ${t.phone2 ? html`<div class="track-meta-item"><div class="track-meta-label">טלפון 2</div><div class="track-meta-value">${t.phone2}</div></div>` : null}
+          ${t.devicePhone ? html`<div class="track-meta-item"><div class="track-meta-label">טלפון מכשיר</div><div class="track-meta-value">${t.devicePhone}</div></div>` : null}
+          ${t.identifier ? html`<div class="track-meta-item"><div class="track-meta-label">מספר מזהה</div><div class="track-meta-value">${t.identifier}</div></div>` : null}
+          ${t.address ? html`<div class="track-meta-item span2"><div class="track-meta-label">כתובת</div><div class="track-meta-value">${t.address}</div></div>` : null}
+        </div>
+        <div class="track-dates">
+          <span>נמכר: <b>${saleDateFmt}</b></span>
+          <span>תפוגה: <b>${expiryFmt}</b></span>
+          <button class="icon-btn" onClick=${() => deleteTrack(t.id)} aria-label="מחיקת לקוח מסלול">
+            <${Icon} name="trash" size=${14} />
+          </button>
+        </div>
+      </div>
+    `;
+  };
 
   const productList = (list, max) => html`
     <div class="form-card" style="margin-top:8px">
@@ -1140,6 +1283,67 @@ function App() {
                   </div>
                 ` : productList(productSummary, maxProductQty)}
               ` : null}
+
+              ${tab === 'tracks' ? html`
+                <div class="stat-row">
+                  <${StatCard} label="סה״כ לקוחות מסלול" value=${tracks.length} accent="var(--platinum)" />
+                  <${StatCard} label="עברה להם שנה" value=${expiredTracks.length} accent="var(--danger)" />
+                </div>
+
+                <div class="form-card">
+                  <div class="field">
+                    <label for="tr-name">שם לקוח</label>
+                    <input id="tr-name" value=${trName} onInput=${e => setTrName(e.target.value)} placeholder="שם מלא" />
+                  </div>
+                  <div class="field">
+                    <label for="tr-idnum">תעודת זהות</label>
+                    <input id="tr-idnum" value=${trIdNum} inputmode="numeric" onInput=${e => setTrIdNum(e.target.value)} placeholder="000000000" />
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="tr-phone1">טלפון לקוח 1</label>
+                      <input id="tr-phone1" type="tel" value=${trPhone1} onInput=${e => setTrPhone1(e.target.value)} placeholder="05X-XXXXXXX" />
+                    </div>
+                    <div class="field">
+                      <label for="tr-phone2">טלפון לקוח 2</label>
+                      <input id="tr-phone2" type="tel" value=${trPhone2} onInput=${e => setTrPhone2(e.target.value)} placeholder="אופציונלי" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="tr-devphone">מספר טלפון של המכשיר</label>
+                    <input id="tr-devphone" type="tel" value=${trDevicePhone} onInput=${e => setTrDevicePhone(e.target.value)} placeholder="מספר הקו שנמכר" />
+                  </div>
+                  <div class="field">
+                    <label for="tr-idfield">מספר מזהה</label>
+                    <input id="tr-idfield" value=${trIdentifier} onInput=${e => setTrIdentifier(e.target.value)} placeholder="IMEI / מספר הזמנה" />
+                  </div>
+                  <div class="field">
+                    <label for="tr-address">כתובת</label>
+                    <input id="tr-address" value=${trAddress} onInput=${e => setTrAddress(e.target.value)} placeholder="עיר, רחוב ומספר" />
+                  </div>
+                  <div class="field">
+                    <label for="tr-date">תאריך מכירה</label>
+                    <input id="tr-date" type="date" value=${trSaleDate} onInput=${e => setTrSaleDate(e.target.value)} />
+                  </div>
+                  ${trFormError ? html`<div class="form-error">${trFormError}</div>` : null}
+                  <button class="add-btn" onClick=${addTrack}>
+                    <${Icon} name="plus" size=${17} /> הוספת לקוח מסלול
+                  </button>
+                </div>
+
+                ${expiredTracks.length > 0 ? html`
+                  <div class="section-label">עברה שנה — לטיפול</div>
+                  ${expiredTracks.map(trackRow)}
+                ` : null}
+
+                <div class="section-label">כל לקוחות המסלול</div>
+                ${tracksWithExpiry.length === 0 ? html`
+                  <div class="empty-state">
+                    <${Icon} name="idcard" size=${30} />
+                    <p>עוד לא נוספו לקוחות מסלול</p>
+                  </div>
+                ` : tracksWithExpiry.map(trackRow)}
+              ` : null}
             </div>
           `}
 
@@ -1152,6 +1356,9 @@ function App() {
             </button>
             <button class=${`nav-btn ${tab === 'summary' ? 'active' : ''}`} onClick=${() => setTab('summary')}>
               <${Icon} name="barchart" size=${19} /><span>סיכום חודשי</span>
+            </button>
+            <button class=${`nav-btn ${tab === 'tracks' ? 'active' : ''}`} onClick=${() => setTab('tracks')}>
+              <${Icon} name="idcard" size=${19} /><span>מסלול</span>
             </button>
           </div>
           <div class="home-indicator"></div>
