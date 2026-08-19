@@ -295,6 +295,7 @@
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .search-clear:hover { background: var(--danger-dim); color: var(--danger); }
+  .search-no-match-note { font-size: 12px; color: var(--text-lo); text-align: center; padding: 8px 0 4px; }
 
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
   .month-nav-label { font-family: 'Frank Ruhl Libre', serif; font-weight: 600; font-size: 16px; letter-spacing: 0.2px; }
@@ -971,12 +972,23 @@ function App() {
     tracksWithExpiry.filter(t => t.isExpired).sort((a, b) => a.daysLeft - b.daysLeft),
   [tracksWithExpiry]);
 
-  const searchedTracks = useMemo(() =>
-    tracksWithExpiry.filter(t => trackMatchesSearch(t, trackSearch)),
+  // Search never hides customers — it flags matches (for the gold highlight)
+  // and bubbles them to the top, so the full roster stays visible.
+  const tracksWithMatch = useMemo(() =>
+    tracksWithExpiry.map(t => ({ ...t, isSearchMatch: !!trackSearch && trackMatchesSearch(t, trackSearch) })),
   [tracksWithExpiry, trackSearch]);
-  const searchedExpiredTracks = useMemo(() =>
-    expiredTracks.filter(t => trackMatchesSearch(t, trackSearch)),
-  [expiredTracks, trackSearch]);
+  const matchCount = useMemo(() =>
+    tracksWithMatch.reduce((a, t) => a + (t.isSearchMatch ? 1 : 0), 0),
+  [tracksWithMatch]);
+  const sortedTracks = useMemo(() =>
+    [...tracksWithMatch].sort((a, b) => (b.isSearchMatch ? 1 : 0) - (a.isSearchMatch ? 1 : 0)),
+  [tracksWithMatch]);
+  const sortedExpiredTracks = useMemo(() =>
+    tracksWithMatch.filter(t => t.isExpired).sort((a, b) => {
+      const byMatch = (b.isSearchMatch ? 1 : 0) - (a.isSearchMatch ? 1 : 0);
+      return byMatch !== 0 ? byMatch : a.daysLeft - b.daysLeft;
+    }),
+  [tracksWithMatch]);
 
   const yearMonthTotals = useMemo(() => {
     const arr = new Array(12).fill(0);
@@ -1417,18 +1429,21 @@ function App() {
                   ` : null}
                 </div>
 
-                ${searchedExpiredTracks.length > 0 ? html`
+                ${sortedExpiredTracks.length > 0 ? html`
                   <div class="section-label">עברה שנה — לטיפול</div>
-                  ${searchedExpiredTracks.map(t => trackRow(t, !!trackSearch))}
+                  ${sortedExpiredTracks.map(t => trackRow(t, t.isSearchMatch))}
                 ` : null}
 
                 <div class="section-label">כל לקוחות המסלול</div>
-                ${searchedTracks.length === 0 ? html`
+                ${tracks.length === 0 ? html`
                   <div class="empty-state">
                     <${Icon} name="idcard" size=${30} />
-                    <p>${trackSearch ? 'לא נמצאו לקוחות התואמים לחיפוש' : 'עוד לא נוספו לקוחות מסלול'}</p>
+                    <p>עוד לא נוספו לקוחות מסלול</p>
                   </div>
-                ` : searchedTracks.map(t => trackRow(t, !!trackSearch))}
+                ` : html`
+                  ${trackSearch && matchCount === 0 ? html`<div class="search-no-match-note">לא נמצאו התאמות לחיפוש</div>` : null}
+                  ${sortedTracks.map(t => trackRow(t, t.isSearchMatch))}
+                `}
               ` : null}
             </div>
           `}
