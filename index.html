@@ -246,6 +246,10 @@
     border-color: rgba(177,63,73,0.35);
     background: linear-gradient(135deg, var(--danger-dim), rgba(177,63,73,0.02));
   }
+  .track-card.is-match {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold-dim);
+  }
   .track-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
   .track-name { font-size: 14px; font-weight: 700; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .track-badge {
@@ -1015,12 +1019,12 @@ function App() {
     </div>
   `;
 
-  const trackRow = (t) => {
+  const trackRow = (t, highlight) => {
     const saleDateFmt = new Date(t.saleDate + 'T00:00:00').toLocaleDateString('he-IL');
     const expiryFmt = t.expiryDate.toLocaleDateString('he-IL');
     const badgeText = t.isExpired ? `עברה שנה · ${Math.abs(t.daysLeft)} ימים` : `${t.daysLeft} ימים לתפוגה`;
     return html`
-      <div class=${`track-card ${t.isExpired ? 'is-expired' : ''}`} key=${t.id}>
+      <div class=${`track-card ${t.isExpired ? 'is-expired' : ''} ${highlight ? 'is-match' : ''}`} key=${t.id}>
         <div class="track-head">
           <span class="track-name">${t.customerName}</span>
           <span class=${`track-badge ${t.isExpired ? 'expired' : 'ok'}`}>${badgeText}</span>
@@ -1357,21 +1361,6 @@ function App() {
                   <${StatCard} label="עברה להם שנה" value=${expiredTracks.length} accent="var(--danger)" />
                 </div>
 
-                <div class="search-bar">
-                  <span class="search-icon"><${Icon} name="search" size=${15} /></span>
-                  <input
-                    class="search-input"
-                    value=${trackSearch}
-                    onInput=${e => setTrackSearch(e.target.value)}
-                    placeholder="חיפוש לפי שם, טלפון, ת.ז או מספר מזהה"
-                  />
-                  ${trackSearch ? html`
-                    <button class="search-clear" onClick=${() => setTrackSearch('')} aria-label="ניקוי חיפוש">
-                      <${Icon} name="close" size=${12} />
-                    </button>
-                  ` : null}
-                </div>
-
                 <div class="form-card">
                   <div class="field">
                     <label for="tr-name">שם לקוח</label>
@@ -1413,9 +1402,24 @@ function App() {
                   </button>
                 </div>
 
+                <div class="search-bar">
+                  <span class="search-icon"><${Icon} name="search" size=${15} /></span>
+                  <input
+                    class="search-input"
+                    value=${trackSearch}
+                    onInput=${e => setTrackSearch(e.target.value)}
+                    placeholder="חיפוש לפי שם, טלפון, ת.ז או מספר מזהה"
+                  />
+                  ${trackSearch ? html`
+                    <button class="search-clear" onClick=${() => setTrackSearch('')} aria-label="ניקוי חיפוש">
+                      <${Icon} name="close" size=${12} />
+                    </button>
+                  ` : null}
+                </div>
+
                 ${searchedExpiredTracks.length > 0 ? html`
                   <div class="section-label">עברה שנה — לטיפול</div>
-                  ${searchedExpiredTracks.map(trackRow)}
+                  ${searchedExpiredTracks.map(t => trackRow(t, !!trackSearch))}
                 ` : null}
 
                 <div class="section-label">כל לקוחות המסלול</div>
@@ -1424,7 +1428,7 @@ function App() {
                     <${Icon} name="idcard" size=${30} />
                     <p>${trackSearch ? 'לא נמצאו לקוחות התואמים לחיפוש' : 'עוד לא נוספו לקוחות מסלול'}</p>
                   </div>
-                ` : searchedTracks.map(trackRow)}
+                ` : searchedTracks.map(t => trackRow(t, !!trackSearch))}
               ` : null}
             </div>
           `}
