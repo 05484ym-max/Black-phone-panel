@@ -127,6 +127,26 @@
   .month-total-label { font-size: 12px; color: var(--text-lo); letter-spacing: 0.2px; line-height: 1; }
   .month-total-value { font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 26px; color: var(--gold); letter-spacing: 0.2px; line-height: 1; }
 
+  .bonus-card {
+    margin-top: 14px;
+    background: linear-gradient(135deg, var(--gold-dim), rgba(156,122,46,0.03));
+    border: 1px solid rgba(156,122,46,0.32);
+    border-radius: 18px;
+    padding: 14px 16px;
+  }
+  .bonus-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .bonus-card-icon {
+    width: 28px; height: 28px; border-radius: 9px;
+    background: rgba(156,122,46,0.18); color: var(--gold-deep);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .bonus-card-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 14px; color: var(--gold-deep); }
+  .bonus-card-stats { display: flex; gap: 10px; }
+  .bonus-stat { flex: 1; }
+  .bonus-stat-label { font-size: 11px; color: var(--text-lo); line-height: 1.3; }
+  .bonus-stat-value { font-family: 'Assistant', sans-serif; font-weight: 800; font-size: 24px; color: var(--gold-deep); margin-top: 3px; }
+  .bonus-card-note { font-size: 10.5px; color: var(--text-lo); margin-top: 10px; }
+
   .tab-content { flex: 1; overflow-y: auto; padding: 0 20px 16px 20px; -webkit-overflow-scrolling: touch; }
   .tab-content::-webkit-scrollbar { width: 0; }
 
@@ -414,6 +434,10 @@ const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי',
 const MONTH_SHORT = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
 const WEEKDAYS = ['א','ב','ג','ד','ה','ו','ש'];
 
+// Products whose name contains this word earn a per-unit bonus (e.g. "מסלול חודשי").
+const BONUS_KEYWORD = 'מסלול';
+const BONUS_PER_UNIT = 30;
+
 const ICONS = {
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
   calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
@@ -427,7 +451,8 @@ const ICONS = {
   wifi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>',
   batteryFull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><line x1="22" y1="10.5" x2="22" y2="13.5"/><rect x="4" y="9" width="14" height="6" fill="currentColor" stroke="none"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.36L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.36L21 8"/><path d="M21 3v5h-5"/></svg>',
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"/></svg>'
 };
 
 function Icon({ name, size = 18 }) {
@@ -763,6 +788,11 @@ function App() {
   const productSummary = useMemo(() => summarizeProducts(monthSales), [monthSales]);
   const maxProductQty = Math.max(1, ...productSummary.map(([, v]) => v.qty));
 
+  const bonusQty = useMemo(() => monthSales
+    .filter(s => s.product.includes(BONUS_KEYWORD))
+    .reduce((a, s) => a + s.qty, 0), [monthSales]);
+  const bonusTotal = bonusQty * BONUS_PER_UNIT;
+
   const yearMonthTotals = useMemo(() => {
     const arr = new Array(12).fill(0);
     sales.forEach(s => {
@@ -1043,6 +1073,26 @@ function App() {
                   <${StatCard} label="הכנסות החודש" value=${formatILS(monthTotal)} accent="var(--gold)" currency=${true} />
                   <${StatCard} label="פריטים שנמכרו" value=${monthItemCount} accent="var(--platinum)" />
                 </div>
+
+                ${bonusQty > 0 ? html`
+                  <div class="bonus-card">
+                    <div class="bonus-card-head">
+                      <div class="bonus-card-icon"><${Icon} name="gift" size=${15} /></div>
+                      <span class="bonus-card-title">בונוס מסלול · ${MONTH_NAMES[cursor.m]}</span>
+                    </div>
+                    <div class="bonus-card-stats">
+                      <div class="bonus-stat">
+                        <span class="bonus-stat-label">מכשירי מסלול נמכרו</span>
+                        <div class="bonus-stat-value">${bonusQty}</div>
+                      </div>
+                      <div class="bonus-stat">
+                        <span class="bonus-stat-label">בונוס לתשלום</span>
+                        <div class="bonus-stat-value">${formatILS(bonusTotal)}</div>
+                      </div>
+                    </div>
+                    <div class="bonus-card-note">₪${BONUS_PER_UNIT} בונוס על כל מכשיר "מסלול" שנמכר</div>
+                  </div>
+                ` : null}
 
                 <div class="section-label">הכנסות לפי חודש · ${cursor.y}</div>
                 ${yearTotal === 0 ? html`
