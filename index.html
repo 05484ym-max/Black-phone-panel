@@ -574,7 +574,10 @@ async function fetchAppData() {
     throw new Error(`תגובה לא תקינה (HTTP ${res.status}): ${text.slice(0, 200)}`);
   }
   if (!data.ok) throw new Error('שגיאת שרת: ' + (data.error || 'שגיאה בטעינת הנתונים'));
-  return { sales: data.sales || [], tracks: data.tracks || [] };
+  // `tracks` stays undefined against an Apps Script deployment that predates
+  // the מסלול feature, so callers can tell "not supported yet" apart from
+  // "supported, currently empty" and avoid wiping the local-only cache.
+  return { sales: data.sales || [], tracks: data.tracks };
 }
 
 async function postToSheet(payload) {
@@ -741,11 +744,16 @@ function App() {
     try {
       const data = await fetchAppData();
       setSales(data.sales);
-      setTracks(data.tracks);
+      saveCachedSales(data.sales);
+      // Older Apps Script deployments (before the מסלול feature) omit
+      // `tracks` entirely — leave the local cache alone in that case
+      // instead of wiping it with an empty list.
+      if (data.tracks !== undefined) {
+        setTracks(data.tracks);
+        saveCachedTracks(data.tracks);
+      }
       setLoadError('');
       setLoadErrorDetail('');
-      saveCachedSales(data.sales);
-      saveCachedTracks(data.tracks);
     } catch (e) {
       setLoadError('לא ניתן להתחבר לגיליון כרגע.');
       setLoadErrorDetail(e && e.message ? e.message : String(e));
