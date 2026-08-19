@@ -536,8 +536,8 @@ function saveCachedSales(data) {
   }
 }
 
-// Track (מסלול) customer records are stored only on this device for now —
-// syncing them to the sheet needs matching changes on the Apps Script side.
+// Instant-load cache for מסלול customer records — same role as CACHE_KEY
+// above, refreshed in the background from the sheet once it responds.
 const TRACKS_CACHE_KEY = 'tracksCacheV1';
 
 function loadCachedTracks() {
@@ -559,7 +559,7 @@ function saveCachedTracks(data) {
 
 /* ---------- Apps Script data layer ---------- */
 
-async function fetchSalesFromSheet() {
+async function fetchAppData() {
   let res;
   try {
     res = await fetch(APPS_SCRIPT_URL, { method: 'GET' });
@@ -574,7 +574,7 @@ async function fetchSalesFromSheet() {
     throw new Error(`תגובה לא תקינה (HTTP ${res.status}): ${text.slice(0, 200)}`);
   }
   if (!data.ok) throw new Error('שגיאת שרת: ' + (data.error || 'שגיאה בטעינת הנתונים'));
-  return data.sales || [];
+  return { sales: data.sales || [], tracks: data.tracks || [] };
 }
 
 async function postToSheet(payload) {
@@ -739,11 +739,13 @@ function App() {
     if (!configured) return;
     if (!silent) setRefreshing(true);
     try {
-      const data = await fetchSalesFromSheet();
-      setSales(data);
+      const data = await fetchAppData();
+      setSales(data.sales);
+      setTracks(data.tracks);
       setLoadError('');
       setLoadErrorDetail('');
-      saveCachedSales(data);
+      saveCachedSales(data.sales);
+      saveCachedTracks(data.tracks);
     } catch (e) {
       setLoadError('לא ניתן להתחבר לגיליון כרגע.');
       setLoadErrorDetail(e && e.message ? e.message : String(e));
@@ -839,6 +841,10 @@ function App() {
     setTrDevicePhone(''); setTrIdentifier(''); setTrAddress(''); setTrSaleDate(todayISO());
     setTrFormError('');
     showToast('לקוח מסלול נוסף בהצלחה');
+    postToSheet({ action: 'add_track', track }).catch(() => {
+      showToast('השמירה בגיליון נכשלה — מרעננים נתונים');
+      loadSales(true);
+    });
   };
 
   const deleteTrack = (id) => {
@@ -846,6 +852,10 @@ function App() {
       const next = prev.filter(t => t.id !== id);
       saveCachedTracks(next);
       return next;
+    });
+    postToSheet({ action: 'delete_track', id }).catch(() => {
+      showToast('המחיקה נכשלה — מרעננים נתונים');
+      loadSales(true);
     });
   };
 
